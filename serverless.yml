@@ -6,7 +6,7 @@ provider:
 #  environment:
 #    variable1: value1
 functions:
-  hello:
+  notify:
     handler: handler.notify
     events:
      - http:
