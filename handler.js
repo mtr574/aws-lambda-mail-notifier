@@ -1,13 +1,13 @@
 'use strict'
 
-var aws = require('aws-sdk')
-var ses = new aws.SES()
-var s3 = new aws.S3()
-var config = require('./config.js')
-var mark = require('markup-js')
+const aws = require('aws-sdk')
+const ses = new aws.SES()
+const s3 = new aws.S3()
+const config = require('./config.js')
+const mark = require('markup-js')
 
 module.exports.notify = (event, context, callback) => {
-    let response = {}
+    let response;
 
     // Check required parameters
     if (event.email === null) {
@@ -17,14 +17,11 @@ module.exports.notify = (event, context, callback) => {
         }
         callback(null, response)
     } else if (event.name === null) {
-        event.name = event.email
+        event.name = 'Anonymouse Burner'
     }
 
     if (event.subject === null) {
         event.subject = config.defaultSubject
-        if (event.subject === null) {
-            event.subject = 'Mail from {{name}}'
-        }
     }
 
     // Email template
@@ -39,19 +36,21 @@ module.exports.notify = (event, context, callback) => {
             }
             callback(null, response)
         } else {
-            var templateBody = data.Body.toString()
+            let templateBody = data.Body.toString()
 
             // Convert newlines in the message
             if (event.message !== null) {
                 event.message = event.message.replace('\r\n', '<br />').replace('\r', '<br />').replace('\n', '<br />')
+            } else {
+                event.message = 'You have notification from Spark. check in: spark.midburn.org'
             }
 
             // Perform the substitutions
-            var subject = mark.up(event.subject, event)
-            var message = mark.up(templateBody, event)
-            var params = {
+            let subject = mark.up(event.subject, event)
+            let message = mark.up(templateBody, event)
+            let params = {
                 Destination: {
-                    ToAddresses: [config.targetAddress]
+                    ToAddresses: [event.email]
                 },
                 Message: {
                     Subject: {
@@ -60,10 +59,10 @@ module.exports.notify = (event, context, callback) => {
                     }
                 },
                 Source: config.fromAddress,
-                ReplyToAddresses: [event.name + '<' + event.email + '>']
+                ReplyToAddresses: ['spark-no-reply@midburn.org']
             }
 
-            var fileExtension = config.templateKey.split('.').pop()
+            let fileExtension = config.templateKey.split('.').pop()
             if (fileExtension.toLowerCase() === 'html') {
                 params.Message.Body = {
                     Html: {
@@ -90,7 +89,8 @@ module.exports.notify = (event, context, callback) => {
                 if (err) {
                     response = {
                         statusCode: 500,
-                        error: 'The email could not be sent ' + err
+                        error: 'The email could not be sent',
+                        reason: err
                     }
                     callback(null, response)
                 } else {
